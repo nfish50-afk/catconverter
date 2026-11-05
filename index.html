@@ -453,7 +453,7 @@
 
     </main>
 
-    <!-- App JavaScript Logic -->
+        <!-- App JavaScript Logic Updated to fix template export -->
     <script>
         let selectedImages = [];
         let currentModule = 'converter';
@@ -933,45 +933,126 @@
             } else if (currentTemplateType === 'cv') {
                 document.getElementById('cv-name').value = 'Nate Fish';
                 document.getElementById('cv-role').value = 'Lead Software Creator & Systems Developer';
+            } else if (currentTemplateType === 'custom') {
+                document.getElementById('cust-header').value = 'Cat Converter Project Brief';
+                document.getElementById('cust-sub').value = 'Offline PWA Application Architecture';
+                document.getElementById('cust-body').value = 'This document summarizes the offline-first web application framework.';
             }
             updateTemplatePreview();
             showToast("Loaded demo template data!");
         }
 
+        // --- FIXED DYNAMIC EXPORT FUNCTION ---
         function exportActiveTemplate(format) {
+            let docTitle = `Cat_${currentTemplateType}_${Date.now()}`;
+            let exportLines = [];
+
+            // Gather field inputs dynamically based on active template
+            if (currentTemplateType === 'invoice') {
+                const num = document.getElementById('inv-num').value || 'INV-0000';
+                const date = document.getElementById('inv-date').value || '-';
+                const due = document.getElementById('inv-due').value || '-';
+                const biller = document.getElementById('inv-biller').value || '';
+                const client = document.getElementById('inv-client').value || '';
+
+                exportLines.push(`INVOICE #${num}`);
+                exportLines.push(`Date: ${date} | Due: ${due}`);
+                exportLines.push(`\n--- BILLER DETAILS ---\n${biller}`);
+                exportLines.push(`\n--- CLIENT DETAILS ---\n${client}`);
+                exportLines.push(`\n--- LINE ITEMS ---`);
+
+                let grandTotal = 0;
+                document.querySelectorAll('#inv-items-container > div').forEach(r => {
+                    const desc = r.querySelector('.inv-item-desc').value || 'Item';
+                    const qty = parseFloat(r.querySelector('.inv-item-qty').value) || 0;
+                    const price = parseFloat(r.querySelector('.inv-item-price').value) || 0;
+                    const tot = qty * price;
+                    grandTotal += tot;
+                    exportLines.push(`• ${desc} | Qty: ${qty} | Price: £${price.toFixed(2)} | Total: £${tot.toFixed(2)}`);
+                });
+                exportLines.push(`\nGRAND TOTAL: £${grandTotal.toFixed(2)}`);
+
+            } else if (currentTemplateType === 'cv') {
+                const name = document.getElementById('cv-name').value || 'Curriculum Vitae';
+                const role = document.getElementById('cv-role').value || '';
+                const contact = document.getElementById('cv-contact').value || '';
+                const location = document.getElementById('cv-location').value || '';
+                const summary = document.getElementById('cv-summary').value || '';
+                const exp = document.getElementById('cv-experience').value || '';
+
+                exportLines.push(name.toUpperCase());
+                if (role) exportLines.push(role);
+                if (contact || location) exportLines.push(`${contact} | ${location}`);
+                if (summary) exportLines.push(`\n--- PROFILE SUMMARY ---\n${summary}`);
+                if (exp) exportLines.push(`\n--- EXPERIENCE & SKILLS ---\n${exp}`);
+
+            } else if (currentTemplateType === 'card') {
+                const name = document.getElementById('card-name').value || 'Business Card';
+                const company = document.getElementById('card-company').value || '';
+                const title = document.getElementById('card-title').value || '';
+                const phone = document.getElementById('card-phone').value || '';
+                const email = document.getElementById('card-email').value || '';
+
+                exportLines.push(name.toUpperCase());
+                if (company) exportLines.push(`Company: ${company}`);
+                if (title) exportLines.push(`Title: ${title}`);
+                if (phone) exportLines.push(`Phone: ${phone}`);
+                if (email) exportLines.push(`Email: ${email}`);
+
+            } else if (currentTemplateType === 'custom') {
+                const header = document.getElementById('cust-header').value || 'CUSTOM DOCUMENT';
+                const sub = document.getElementById('cust-sub').value || '';
+                const body = document.getElementById('cust-body').value || '';
+
+                exportLines.push(header.toUpperCase());
+                if (sub) exportLines.push(sub);
+                if (body) exportLines.push(`\n${body}`);
+            }
+
+            // Generate output file format
             if (format === 'pdf') {
                 const pdf = new jsPDF();
                 pdf.setFont("helvetica", "bold");
                 pdf.setFontSize(16);
-                pdf.text(`CAT CONVERTER - ${currentTemplateType.toUpperCase()}`, 14, 20);
+                pdf.text(exportLines[0] || 'CAT CONVERTER DOCUMENT', 14, 20);
+
+                pdf.setFont("helvetica", "normal");
                 pdf.setFontSize(10);
-                pdf.text(`Created with Cat Converter by Nate Fish`, 14, 28);
-                pdf.save(`Cat_${currentTemplateType}_${Date.now()}.pdf`);
-                showToast("PDF document exported!");
+                
+                let yPos = 30;
+                const fullText = exportLines.slice(1).join('\n');
+                const splitText = pdf.splitTextToSize(fullText, 180);
+                
+                pdf.text(splitText, 14, yPos);
+                pdf.save(`${docTitle}.pdf`);
+                showToast("PDF document exported successfully!");
+
             } else if (format === 'docx') {
-                const doc = new docx.Document({
-                    sections: [{
+                const docParagraphs = exportLines.map((line, idx) => {
+                    return new docx.Paragraph({
                         children: [
-                            new docx.Paragraph({
-                                children: [new docx.TextRun({ text: `Cat Converter - ${currentTemplateType.toUpperCase()}`, bold: true, size: 28, color: "F59E0B" })],
-                                spacing: { after: 200 }
-                            }),
-                            new docx.Paragraph({
-                                children: [new docx.TextRun({ text: "Generated offline via Cat Converter by Nate Fish", size: 20 })]
+                            new docx.TextRun({
+                                text: line,
+                                bold: idx === 0,
+                                size: idx === 0 ? 28 : 22,
+                                color: idx === 0 ? "F59E0B" : "000000"
                             })
-                        ]
-                    }]
+                        ],
+                        spacing: { after: 120 }
+                    });
+                });
+
+                const doc = new docx.Document({
+                    sections: [{ children: docParagraphs }]
                 });
 
                 docx.Packer.toBlob(doc).then(blob => {
                     const link = document.createElement('a');
                     link.href = URL.createObjectURL(blob);
-                    link.download = `Cat_${currentTemplateType}_${Date.now()}.docx`;
+                    link.download = `${docTitle}.docx`;
                     link.click();
-                    showToast("Word (.docx) exported!");
+                    showToast("Word (.docx) exported successfully!");
                 });
             }
         }
     </script>
-</body>
-</html>
