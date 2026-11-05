@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Converter by Nate Fish</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- jsPDF for client-side PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- docx.js for creating .docx Word files client-side -->
+    <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+    <!-- PDF.js for client-side PDF rendering & image extraction -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Manifest & Web App Capable Headers -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Cat Converter">
+    
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Register Service Worker for 100% Offline PWA Capability
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Cat Converter Offline Service Worker Registered!', reg))
+                    .catch(err => console.log('Service Worker Registration Failed:', err));
+            });
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .cat-bg-watermark {
+            position: fixed;
+            bottom: -30px;
+            right: -30px;
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
+            font-size: 28rem;
+            color: #f59e0b;
+        }
+
+        /* Cheeky Winking Eye Animation */
+        @keyframes catWink {
+            0%, 88%, 100% { transform: scaleY(1); }
+            92%, 96% { transform: scaleY(0.1); }
+        }
+        .cat-wink-left {
+            transform-origin: 9px 9.5px;
+            animation: catWink 3.5s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen flex flex-col antialiased selection:bg-amber-500 selection:text-black relative">
+
+    <!-- Ambient Black Cat Background Watermark -->
+    <i class="fa-solid fa-cat cat-bg-watermark"></i>
+
+    <!-- Header & Module Switcher Nav -->
+    <header class="border-b border-amber-500/20 bg-slate-900/95 backdrop-blur sticky top-0 z-50 shadow-lg shadow-black/40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col sm:flex-row items-center justify-between py-3 sm:h-20 gap-4">
+                
+                <!-- App Logo & Branding with Animated Cheeky Winking Black Cat -->
+                <div class="flex items-center gap-3">
+                    <div class="relative w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 p-0.5 shadow-lg shadow-amber-500/25 hover:scale-105 transition-transform">
+                        <div class="w-full h-full bg-slate-950 rounded-[14px] flex items-center justify-center relative overflow-hidden">
+                            <!-- Cheeky Black Cat Vector Logo with Winking Left Eye & Smirk -->
+                            <svg class="w-9 h-9 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+                                <!-- Cat Ears & Head Outline -->
+                                <path d="M4 3.5L8.5 7C9.6 6.4 10.8 6 12 6C13.2 6 14.4 6.4 15.5 7L20 3.5L18.5 10C20 11.5 21 13.6 21 16C21 20 17 22 12 22C7 22 3 20 3 16C3 13.6 4 11.5 5.5 10L4 3.5Z" />
+                                <!-- Cat Eyes: Left Eye (Winking), Right Eye (Open) -->
+                                <ellipse cx="9" cy="13" rx="1.5" ry="2" fill="#0f172a" class="cat-wink-left" />
+                                <ellipse cx="15" cy="13" rx="1.5" ry="2" fill="#0f172a" />
+                                <!-- Cheeky Nose & Smirk -->
+                                <path d="M11.2 16H12.8L12 16.8L11.2 16Z" fill="#f59e0b" />
+                                <path d="M12 16.8C11.2 17.5 10.2 17.5 9.5 17M12 16.8C12.8 17.5 13.8 17.5 14.5 17" stroke="#f59e0b" stroke-width="1.2" stroke-linecap="round" fill="none" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="font-black text-2xl tracking-tight bg-gradient-to-r from-amber-300 via-orange-400 to-amber-200 bg-clip-text text-transparent">
+                                Cat Converter 🐾
+                            </h1>
+                            <span class="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">v3.1</span>
+                        </div>
+                        <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                            <span>by <strong class="text-amber-400 font-semibold">Nate Fish</strong></span>
+                            <span class="text-slate-600">•</span>
+                            <span class="text-amber-400/90 font-medium flex items-center gap-1">
+                                <i class="fa-solid fa-cat text-[10px]"></i> Purr-fectly Offline & Private
+                            </span>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Main Module Tabs -->
+                <nav class="flex bg-slate-950 p-1.5 rounded-2xl border border-slate-800 shadow-inner">
+                    <button id="nav-tab-converter" onclick="switchModule('converter')" 
+                        class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-rotate text-base"></i>
+                        <span>File Converter</span>
+                    </button>
+                    <button id="nav-tab-builder" onclick="switchModule('builder')" 
+                        class="px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-400 hover:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-cubes text-base"></i>
+                        <span>Template Builder</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 relative z-10">
+
+        <!-- Notification Toast -->
+        <div id="toast" class="hidden fixed bottom-6 right-6 bg-amber-500 text-slate-950 px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 border border-amber-300 font-medium transition-all duration-300">
+            <i class="fa-solid fa-paw text-lg"></i>
+            <span id="toast-message" class="text-sm font-bold">Action completed successfully.</span>
+        </div>
+
+        <!-- ================= MODULE 1: FILE CONVERTER ================= -->
+        <section id="module-converter" class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <!-- Card 1: Images to PDF -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-amber-500/30 transition-all">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-3 bg-amber-500/10 text-amber-400 rounded-xl">
+                                <i class="fa-solid fa-images text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-lg text-white">Images to PDF</h2>
+                                <p class="text-xs text-slate-400">Combine JPG, PNG & WEBP files into one PDF</p>
+                            </div>
+                        </div>
+
+                        <div id="drop-zone-img" 
+                            class="border-2 border-dashed border-slate-700 hover:border-amber-500 bg-slate-950/60 rounded-xl p-6 text-center cursor-pointer transition-all mb-4"
+                            onclick="document.getElementById('input-img-pdf').click()"
+                            ondragover="event.preventDefault()"
+                            ondrop="handleDropImages(event)">
+                            <i class="fa-solid fa-paw text-3xl text-slate-600 mb-2 hover:text-amber-400 transition-colors"></i>
+                            <p class="text-sm font-medium text-slate-300">Click or Drag & Drop Images</p>
+                            <p class="text-xs text-slate-500 mt-1">Multi-page document creation</p>
+                            <input type="file" id="input-img-pdf" multiple accept="image/*" class="hidden" onchange="handleImageSelection(event)">
+                        </div>
+
+                        <div id="img-preview-list" class="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto mb-4 p-1"></div>
+                    </div>
+
+                    <button onclick="compileImagesToPDF()" id="btn-build-img-pdf" disabled
+                        class="w-full py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-slate-950 font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Compile to PDF</span>
+                    </button>
+                </div>
+
+                <!-- Card 2: Text / Notes to PDF & Word -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-amber-500/30 transition-all">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="flex items-center gap-3">
+                                <div class="p-3 bg-orange-500/10 text-orange-400 rounded-xl">
+                                    <i class="fa-solid fa-file-lines text-xl"></i>
+                                </div>
+                                <div>
+                                    <h2 class="font-bold text-lg text-white">Text to PDF / Word (.docx)</h2>
+                                    <p class="text-xs text-slate-400">Convert notes or text directly to document formats</p>
+                                </div>
+                            </div>
+                            <!-- Voice Note Dictation Button -->
+                            <button id="btn-voice-dictate" onclick="toggleVoiceDictation()" title="Record Voice Note"
+                                class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-microphone" id="voice-mic-icon"></i>
+                                <span id="voice-mic-label">Dictate</span>
+                            </button>
+                        </div>
+
+                        <div class="space-y-3">
+                            <input type="text" id="txt-doc-title" placeholder="Document Title (e.g., Project Scope)" 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                            <textarea id="txt-doc-content" rows="5" placeholder="Type or dictate your text or markdown content here..." 
+                                class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <button onclick="convertTextToPDF()" 
+                            class="py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-file-pdf"></i>
+                            <span>Save as PDF</span>
+                        </button>
+                        <button onclick="convertTextToDocx()" 
+                            class="py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2 text-sm">
+                            <i class="fa-solid fa-file-word"></i>
+                            <span>Save as Word</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card 3: PDF Page Extractor to Image -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-xl hover:border-amber-500/30 transition-all">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                                <i class="fa-solid fa-file-export text-xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="font-bold text-lg text-white">PDF Page Extractor</h2>
+                                <p class="text-xs text-slate-400">Render and extract PDF pages to PNG images</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Select PDF File</label>
+                                <input type="file" id="input-pdf-file" accept="application/pdf" 
+                                    class="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-slate-800 file:text-slate-200 hover:file:bg-slate-700 cursor-pointer bg-slate-950 rounded-xl border border-slate-800 p-1">
+                            </div>
+                            <div id="pdf-extract-status" class="text-xs text-slate-400 min-h-[40px] flex items-center justify-center border border-slate-800 rounded-xl bg-slate-950 p-2 text-center">
+                                Upload a PDF to render & download pages
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="extractPdfPages()" 
+                        class="w-full mt-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-file-image"></i>
+                        <span>Extract PDF Pages to PNG</span>
+                    </button>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ================= MODULE 2: TEMPLATE BUILDER ================= -->
+        <section id="module-builder" class="hidden space-y-6">
+            
+            <!-- Top Selector Menu: Dynamic Dropdown -->
+            <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                        <i class="fa-solid fa-sliders text-lg"></i>
+                    </div>
+                    <div>
+                        <h2 class="font-bold text-white text-base">Template Builder Studio</h2>
+                        <p class="text-xs text-slate-400">Choose a document template, fill details, and export to PDF or Word</p>
+                    </div>
+                </div>
+
+                <!-- Template Type Dropdown Menu -->
+                <div class="flex items-center gap-3">
+                    <label for="template-type-select" class="text-xs font-bold text-slate-300 uppercase tracking-wider">Template Type:</label>
+                    <select id="template-type-select" onchange="handleTemplateDropdownChange(this.value)" 
+                        class="bg-slate-950 border-2 border-amber-500/50 hover:border-amber-400 text-amber-300 font-bold text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500 transition cursor-pointer">
+                        <option value="invoice">📄 Invoice</option>
+                        <option value="cv">👔 CV / Resume</option>
+                        <option value="card">🎴 Business Card</option>
+                        <option value="custom">✏️ Custom Template</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Workspace Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Dynamic Form Controls (Left) -->
+                <div class="lg:col-span-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
+                    <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+                        <h2 class="font-bold text-lg flex items-center gap-2 text-amber-400">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                            <span id="tmpl-form-header">Invoice Parameters</span>
+                        </h2>
+                        <button onclick="loadDemoData()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 px-3 py-1.5 rounded-lg border border-slate-700 transition font-medium">
+                            <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Demo Data
+                        </button>
+                    </div>
+
+                    <!-- FORM 1: INVOICE -->
+                    <div id="form-invoice" class="space-y-4">
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Invoice #</label>
+                                <input type="text" id="inv-num" value="INV-1001" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Issue Date</label>
+                                <input type="date" id="inv-date" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Due Date</label>
+                                <input type="date" id="inv-due" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Your Details (Biller)</label>
+                                <textarea id="inv-biller" rows="3" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 resize-none">Nate Fish Tech Studio&#10;London, UK&#10;contact@natefish.dev</textarea>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Client Details</label>
+                                <textarea id="inv-client" rows="3" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 resize-none">Acme Client Ltd&#10;42 High Street&#10;London, UK</textarea>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-xs font-medium text-slate-400">Line Items & Pricing</label>
+                                <button onclick="addInvoiceItem()" class="text-xs text-amber-400 hover:text-amber-300 font-bold">+ Add Line Item</button>
+                            </div>
+                            <div class="space-y-2" id="inv-items-container"></div>
+                        </div>
+                    </div>
+
+                    <!-- FORM 2: CV / RESUME -->
+                    <div id="form-cv" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Full Name</label>
+                                <input type="text" id="cv-name" value="Nate Fish" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Target Job Title</label>
+                                <input type="text" id="cv-role" value="Full-Stack Developer & Software Architect" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Contact Details</label>
+                                <input type="text" id="cv-contact" value="nate@example.com | +44 7700 900000" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Location / Portfolio</label>
+                                <input type="text" id="cv-location" value="London, UK | natefish.dev" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Professional Profile Summary</label>
+                            <textarea id="cv-summary" rows="3" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 resize-none">Resourceful tech creator building clean, offline-first application suites, local file conversion engines, and customizable document tools.</textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Experience & Skill Highlights</label>
+                            <textarea id="cv-experience" rows="4" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-slate-200 resize-none">• Founder & Lead Engineer - Cat Converter Studio (2024-Present)
+• Designed zero-cloud web and desktop utility applications.
+• Core Tech Stack: Python, JavaScript, HTML5/CSS3, Client-Side Compilers.</textarea>
+                        </div>
+                    </div>
+
+                    <!-- FORM 3: BUSINESS CARD -->
+                    <div id="form-card" class="hidden space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Cardholder Name</label>
+                                <input type="text" id="card-name" value="Nate Fish" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Company / Studio</label>
+                                <input type="text" id="card-company" value="Cat Converter Studios" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Job Title</label>
+                                <input type="text" id="card-title" value="Lead Application Developer" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-400 mb-1">Direct Phone</label>
+                                <input type="text" id="card-phone" value="+44 (0) 7911 123456" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Email / Website</label>
+                            <input type="text" id="card-email" value="nate@catconverter.dev | www.natefish.dev" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                        </div>
+                    </div>
+
+                    <!-- FORM 4: CUSTOM TEMPLATE -->
+                    <div id="form-custom" class="hidden space-y-4">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Custom Document Header / Title</label>
+                            <input type="text" id="cust-header" value="" placeholder="e.g. Document Title" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Subtitle / Author Line</label>
+                            <input type="text" id="cust-sub" value="" placeholder="e.g. Subtitle or Author Details" oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-slate-400 mb-1">Document Body Content</label>
+                            <textarea id="cust-body" rows="6" placeholder="Enter your custom document content..." oninput="updateTemplatePreview()" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Live Preview Panel & Dual Export (Right) -->
+                <div class="lg:col-span-6 flex flex-col space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex-1 flex flex-col justify-between shadow-xl">
+                        <div>
+                            <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-800">
+                                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                                    <i class="fa-solid fa-eye text-amber-400"></i>
+                                    <span>Real-Time Canvas Preview</span>
+                                </h3>
+                                <span class="text-[10px] bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-full font-mono font-bold">Cat-Rendered</span>
+                            </div>
+
+                            <!-- Document Preview Sheet -->
+                            <div id="template-preview-sheet" class="bg-white text-slate-900 p-6 rounded-xl shadow-inner min-h-[420px] text-xs font-sans relative overflow-hidden border border-slate-200">
+                                <div class="absolute top-4 right-4 text-slate-100 text-6xl pointer-events-none select-none opacity-40">
+                                    <i class="fa-solid fa-cat"></i>
+                                </div>
+                                <div id="sheet-content-holder"></div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Export Action Buttons -->
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <button onclick="exportActiveTemplate('pdf')" 
+                                class="py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-extrabold rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-lg"></i>
+                                <span>Export to PDF</span>
+                            </button>
+                            <button onclick="exportActiveTemplate('docx')" 
+                                class="py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-word text-lg"></i>
+                                <span>Export to Word (.docx)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <!-- App JavaScript Logic -->
+    <script>
+        let selectedImages = [];
+        let currentModule = 'converter';
+        let currentTemplateType = 'invoice';
+        let recognition = null;
+        let isRecording = false;
+        const { jsPDF } = window.jspdf;
+
+        // Initialize Speech Recognition if supported by the browser
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let transcript = '';
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    transcript += event.results[i][0].transcript;
+                }
+                const textArea = document.getElementById('txt-doc-content');
+                if (textArea.dataset.baseText === undefined) {
+                    textArea.dataset.baseText = textArea.value;
+                }
+                textArea.value = (textArea.dataset.baseText ? textArea.dataset.baseText + ' ' : '') + transcript;
+            };
+
+            recognition.onerror = (event) => {
+                showToast("Voice dictation error: " + event.error);
+                stopVoiceDictation();
+            };
+
+            recognition.onend = () => {
+                if (isRecording) stopVoiceDictation();
+            };
+        }
+
+        function toggleVoiceDictation() {
+            if (!recognition) {
+                showToast("Voice recognition is not supported on this browser.");
+                return;
+            }
+            if (isRecording) {
+                stopVoiceDictation();
+            } else {
+                startVoiceDictation();
+            }
+        }
+
+        function startVoiceDictation() {
+            const textArea = document.getElementById('txt-doc-content');
+            textArea.dataset.baseText = textArea.value;
+            recognition.start();
+            isRecording = true;
+            const btn = document.getElementById('btn-voice-dictate');
+            const icon = document.getElementById('voice-mic-icon');
+            const label = document.getElementById('voice-mic-label');
+
+            btn.classList.replace('bg-slate-800', 'bg-red-600');
+            btn.classList.replace('text-amber-400', 'text-white');
+            btn.classList.add('animate-pulse');
+            icon.className = "fa-solid fa-microphone-slash";
+            label.innerText = "Stop";
+            showToast("Listening... Speak into your microphone.");
+        }
+
+        function stopVoiceDictation() {
+            if (recognition && isRecording) {
+                recognition.stop();
+            }
+            isRecording = false;
+            const textArea = document.getElementById('txt-doc-content');
+            delete textArea.dataset.baseText;
+
+            const btn = document.getElementById('btn-voice-dictate');
+            const icon = document.getElementById('voice-mic-icon');
+            const label = document.getElementById('voice-mic-label');
+
+            btn.classList.replace('bg-red-600', 'bg-slate-800');
+            btn.classList.replace('text-white', 'text-amber-400');
+            btn.classList.remove('animate-pulse');
+            icon.className = "fa-solid fa-microphone";
+            label.innerText = "Dictate";
+            showToast("Voice dictation stopped.");
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('inv-date').value = today;
+            const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('inv-due').value = dueDate;
+
+            addInvoiceItem("Offline Web Application Design", 1, 650.00);
+            addInvoiceItem("Custom Python & Word Core Engine", 1, 350.00);
+            
+            updateTemplatePreview();
+        });
+
+        // Main Module Switcher
+        function switchModule(mod) {
+            currentModule = mod;
+            const moduleConverter = document.getElementById('module-converter');
+            const moduleBuilder = document.getElementById('module-builder');
+            const tabConverter = document.getElementById('nav-tab-converter');
+            const tabBuilder = document.getElementById('nav-tab-builder');
+
+            if (mod === 'converter') {
+                moduleConverter.classList.remove('hidden');
+                moduleBuilder.classList.add('hidden');
+                tabConverter.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md flex items-center gap-2";
+                tabBuilder.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-400 hover:text-white flex items-center gap-2";
+            } else {
+                moduleConverter.classList.add('hidden');
+                moduleBuilder.classList.remove('hidden');
+                tabBuilder.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md flex items-center gap-2";
+                tabConverter.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 text-slate-400 hover:text-white flex items-center gap-2";
+            }
+        }
+
+        // Dropdown Switcher for Template Types
+        function handleTemplateDropdownChange(val) {
+            currentTemplateType = val;
+
+            ['invoice', 'cv', 'card', 'custom'].forEach(t => {
+                document.getElementById(`form-${t}`).classList.add('hidden');
+            });
+
+            document.getElementById(`form-${val}`).classList.remove('hidden');
+
+            const titleMap = {
+                invoice: "Invoice Parameters",
+                cv: "CV / Resume Details",
+                card: "Business Card Parameters",
+                custom: "Custom Template Setup"
+            };
+            document.getElementById('tmpl-form-header').innerText = titleMap[val];
+
+            updateTemplatePreview();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3500);
+        }
+
+        // --- FILE CONVERTER MODULE LOGIC ---
+        function handleImageSelection(e) {
+            if (e.target.files) processImageFiles(Array.from(e.target.files));
+        }
+
+        function handleDropImages(e) {
+            e.preventDefault();
+            if (e.dataTransfer.files) processImageFiles(Array.from(e.dataTransfer.files));
+        }
+
+        function processImageFiles(files) {
+            files.forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        selectedImages.push({ id: Date.now() + Math.random(), src: event.target.result });
+                        renderImagePreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function renderImagePreviews() {
+            const list = document.getElementById('img-preview-list');
+            const btn = document.getElementById('btn-build-img-pdf');
+            list.innerHTML = '';
+
+            selectedImages.forEach((img, idx) => {
+                const item = document.createElement('div');
+                item.className = "relative group rounded-lg overflow-hidden border border-slate-800 bg-slate-950 h-20 flex items-center justify-center";
+                item.innerHTML = `
+                    <img src="${img.src}" class="object-cover w-full h-full" alt="preview">
+                    <button onclick="removeImage(${idx})" class="absolute top-1 right-1 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+
+            btn.disabled = selectedImages.length === 0;
+        }
+
+        function removeImage(idx) {
+            selectedImages.splice(idx, 1);
+            renderImagePreviews();
+        }
+
+        function compileImagesToPDF() {
+            if (selectedImages.length === 0) return;
+            const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+            const w = pdf.internal.pageSize.getWidth();
+            const h = pdf.internal.pageSize.getHeight();
+
+            selectedImages.forEach((img, i) => {
+                if (i > 0) pdf.addPage();
+                pdf.addImage(img.src, 'JPEG', 10, 10, w - 20, h - 20);
+            });
+
+            pdf.save('cat_converted_images.pdf');
+            showToast("Images compiled to PDF!");
+        }
+
+        function convertTextToPDF() {
+            const title = document.getElementById('txt-doc-title').value.trim() || "Cat Notes";
+            const content = document.getElementById('txt-doc-content').value.trim();
+
+            if (!content) return showToast("Please enter text content first.");
+
+            const pdf = new jsPDF();
+            pdf.setFont("helvetica", "bold");
+            pdf.setFontSize(16);
+            pdf.text(title, 20, 20);
+
+            pdf.setFont("helvetica", "normal");
+            pdf.setFontSize(11);
+            const lines = pdf.splitTextToSize(content, 170);
+            pdf.text(lines, 20, 32);
+
+            pdf.save(`${title.toLowerCase().replace(/\s+/g, '_')}.pdf`);
+            showToast("Saved as PDF file!");
+        }
+
+        function convertTextToDocx() {
+            const title = document.getElementById('txt-doc-title').value.trim() || "Cat Document";
+            const content = document.getElementById('txt-doc-content').value.trim();
+
+            if (!content) return showToast("Please enter text content first.");
+
+            const doc = new docx.Document({
+                sections: [{
+                    children: [
+                        new docx.Paragraph({
+                            children: [new docx.TextRun({ text: title, bold: true, size: 32, color: "F59E0B" })],
+                            spacing: { after: 300 }
+                        }),
+                        ...content.split('\n').map(l => new docx.Paragraph({
+                            children: [new docx.TextRun({ text: l, size: 22 })],
+                            spacing: { after: 120 }
+                        }))
+                    ]
+                }]
+            });
+
+            docx.Packer.toBlob(doc).then(blob => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `${title.toLowerCase().replace(/\s+/g, '_')}.docx`;
+                link.click();
+                showToast("Saved as Word (.docx) file!");
+            });
+        }
+
+        async function extractPdfPages() {
+            const input = document.getElementById('input-pdf-file');
+            const status = document.getElementById('pdf-extract-status');
+
+            if (!input.files || input.files.length === 0) {
+                showToast("Select a PDF file first.");
+                return;
+            }
+
+            const file = input.files[0];
+            status.innerText = "Processing PDF pages...";
+
+            const fileArrayBuffer = await file.arrayBuffer();
+            const pdfDoc = await pdfjsLib.getDocument({ data: fileArrayBuffer }).promise;
+            
+            for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1.5 });
+
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                const imgDataUrl = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `${file.name.replace('.pdf', '')}_page_${pageNum}.png`;
+                link.href = imgDataUrl;
+                link.click();
+            }
+
+            status.innerText = `Extracted ${pdfDoc.numPages} page(s) to PNG!`;
+            showToast(`Extracted ${pdfDoc.numPages} PDF page(s) successfully!`);
+        }
+
+        // --- TEMPLATE BUILDER MODULE LOGIC ---
+        function addInvoiceItem(desc = '', qty = 1, price = 0.00) {
+            const container = document.getElementById('inv-items-container');
+            const rowId = 'row-' + Date.now() + Math.random().toString(36).substr(2, 4);
+
+            const row = document.createElement('div');
+            row.id = rowId;
+            row.className = "flex gap-2 items-center bg-slate-950 p-2 rounded-xl border border-slate-800";
+            row.innerHTML = `
+                <input type="text" placeholder="Item description" value="${desc}" oninput="updateTemplatePreview()"
+                    class="inv-item-desc flex-1 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-slate-200">
+                <input type="number" min="1" placeholder="Qty" value="${qty}" oninput="updateTemplatePreview()"
+                    class="inv-item-qty w-14 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1 text-xs text-slate-200 text-center">
+                <input type="number" step="0.01" placeholder="Price" value="${price}" oninput="updateTemplatePreview()"
+                    class="inv-item-price w-20 bg-slate-900 border border-slate-800 rounded-lg px-1.5 py-1 text-xs text-slate-200 text-right">
+                <button onclick="document.getElementById('${rowId}').remove(); updateTemplatePreview();" class="text-slate-500 hover:text-red-400 p-1">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+            `;
+            container.appendChild(row);
+            updateTemplatePreview();
+        }
+
+        function updateTemplatePreview() {
+            const holder = document.getElementById('sheet-content-holder');
+            holder.innerHTML = '';
+
+            if (currentTemplateType === 'invoice') {
+                const num = document.getElementById('inv-num').value || 'INV-0000';
+                const date = document.getElementById('inv-date').value || '-';
+                const due = document.getElementById('inv-due').value || '-';
+                const biller = document.getElementById('inv-biller').value || '';
+                const client = document.getElementById('inv-client').value || '';
+
+                let rowsHtml = '';
+                let grandTotal = 0;
+                document.querySelectorAll('#inv-items-container > div').forEach(r => {
+                    const desc = r.querySelector('.inv-item-desc').value || 'Item';
+                    const qty = parseFloat(r.querySelector('.inv-item-qty').value) || 0;
+                    const price = parseFloat(r.querySelector('.inv-item-price').value) || 0;
+                    const tot = qty * price;
+                    grandTotal += tot;
+
+                    rowsHtml += `
+                        <tr class="border-b border-slate-100">
+                            <td class="py-1.5">${desc}</td>
+                            <td class="py-1.5 text-center">${qty}</td>
+                            <td class="py-1.5 text-right">£${price.toFixed(2)}</td>
+                            <td class="py-1.5 text-right font-bold">£${tot.toFixed(2)}</td>
+                        </tr>
+                    `;
+                });
+
+                holder.innerHTML = `
+                    <div class="flex justify-between items-start border-b pb-3 mb-3">
+                        <div>
+                            <h2 class="text-lg font-bold text-amber-600 flex items-center gap-1.5">
+                                <i class="fa-solid fa-cat"></i> ${biller.split('\n')[0] || 'Company'}
+                            </h2>
+                            <p class="text-slate-500 whitespace-pre-line text-[11px]">${biller.split('\n').slice(1).join('\n')}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold uppercase text-slate-400">INVOICE</span>
+                            <p class="font-mono text-amber-600 font-bold">#${num}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4 text-[11px]">
+                        <div>
+                            <strong class="text-slate-400 block">Billed To:</strong>
+                            <p class="whitespace-pre-line">${client}</p>
+                        </div>
+                        <div class="text-right">
+                            <p><span class="text-slate-400">Date:</span> ${date}</p>
+                            <p><span class="text-slate-400">Due:</span> ${due}</p>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-left text-[11px] mb-4">
+                        <thead>
+                            <tr class="border-b text-slate-400 font-bold">
+                                <th>Item</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-right">Price</th>
+                                <th class="text-right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rowsHtml}</tbody>
+                    </table>
+
+                    <div class="border-t pt-2 flex justify-between font-bold text-sm">
+                        <span>Grand Total:</span>
+                        <span class="text-amber-600">£${grandTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            } else if (currentTemplateType === 'cv') {
+                const name = document.getElementById('cv-name').value;
+                const role = document.getElementById('cv-role').value;
+                const contact = document.getElementById('cv-contact').value;
+                const location = document.getElementById('cv-location').value;
+                const summary = document.getElementById('cv-summary').value;
+                const exp = document.getElementById('cv-experience').value;
+
+                holder.innerHTML = `
+                    <div class="border-b border-amber-500 pb-3 mb-3">
+                        <h2 class="text-xl font-extrabold text-slate-900">${name}</h2>
+                        <p class="text-amber-600 font-bold text-xs">${role}</p>
+                        <p class="text-[10px] text-slate-500 mt-1">${contact} | ${location}</p>
+                    </div>
+                    <div class="space-y-3 text-[11px]">
+                        <div>
+                            <h3 class="font-bold text-slate-700 uppercase border-b pb-0.5 mb-1 text-[10px]">Profile Summary</h3>
+                            <p class="text-slate-600 whitespace-pre-line">${summary}</p>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-slate-700 uppercase border-b pb-0.5 mb-1 text-[10px]">Experience & Skills</h3>
+                            <p class="text-slate-600 whitespace-pre-line">${exp}</p>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTemplateType === 'card') {
+                const name = document.getElementById('card-name').value;
+                const company = document.getElementById('card-company').value;
+                const title = document.getElementById('card-title').value;
+                const phone = document.getElementById('card-phone').value;
+                const email = document.getElementById('card-email').value;
+
+                holder.innerHTML = `
+                    <div class="h-52 bg-slate-950 text-white p-6 rounded-xl flex flex-col justify-between border border-amber-500/40 relative overflow-hidden shadow-2xl my-4">
+                        <i class="fa-solid fa-cat absolute -right-6 -bottom-6 text-9xl text-amber-500/10"></i>
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-extrabold text-lg text-amber-400 flex items-center gap-2">
+                                    <i class="fa-solid fa-cat"></i> ${company}
+                                </h3>
+                                <p class="text-xs text-slate-400">${title}</p>
+                            </div>
+                            <span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded font-mono">Cat Studio</span>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-black text-white tracking-wide">${name}</h2>
+                            <p class="text-xs text-amber-300 font-mono mt-1">${phone}</p>
+                            <p class="text-xs text-slate-400">${email}</p>
+                        </div>
+                    </div>
+                `;
+            } else if (currentTemplateType === 'custom') {
+                const header = document.getElementById('cust-header').value;
+                const sub = document.getElementById('cust-sub').value;
+                const body = document.getElementById('cust-body').value;
+
+                if (!header && !sub && !body) {
+                    holder.innerHTML = `
+                        <div class="text-center text-slate-400 py-12">
+                            <i class="fa-solid fa-pen-nib text-3xl mb-2 text-slate-300"></i>
+                            <p class="text-xs">Fill in the custom fields on the left to build your document preview.</p>
+                        </div>
+                    `;
+                } else {
+                    holder.innerHTML = `
+                        <div class="border-b pb-3 mb-3">
+                            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <i class="fa-solid fa-cat text-amber-500"></i> ${header || 'Untitled Document'}
+                            </h2>
+                            ${sub ? `<p class="text-xs text-slate-500">${sub}</p>` : ''}
+                        </div>
+                        <div class="text-[11px] text-slate-700 whitespace-pre-line leading-relaxed">
+                            ${body}
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        function loadDemoData() {
+            if (currentTemplateType === 'invoice') {
+                document.getElementById('inv-num').value = 'INV-8802';
+                document.getElementById('inv-biller').value = 'Cat Converter Studio by Nate Fish\nLondon, UK\nnate@catconverter.dev';
+                document.getElementById('inv-client').value = 'Tech Global Solutions Ltd\n100 Innovation Way\nLondon, UK';
+            } else if (currentTemplateType === 'cv') {
+                document.getElementById('cv-name').value = 'Nate Fish';
+                document.getElementById('cv-role').value = 'Lead Software Creator & Systems Developer';
+            }
+            updateTemplatePreview();
+            showToast("Loaded demo template data!");
+        }
+
+        function exportActiveTemplate(format) {
+            if (format === 'pdf') {
+                const pdf = new jsPDF();
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(16);
+                pdf.text(`CAT CONVERTER - ${currentTemplateType.toUpperCase()}`, 14, 20);
+                pdf.setFontSize(10);
+                pdf.text(`Created with Cat Converter by Nate Fish`, 14, 28);
+                pdf.save(`Cat_${currentTemplateType}_${Date.now()}.pdf`);
+                showToast("PDF document exported!");
+            } else if (format === 'docx') {
+                const doc = new docx.Document({
+                    sections: [{
+                        children: [
+                            new docx.Paragraph({
+                                children: [new docx.TextRun({ text: `Cat Converter - ${currentTemplateType.toUpperCase()}`, bold: true, size: 28, color: "F59E0B" })],
+                                spacing: { after: 200 }
+                            }),
+                            new docx.Paragraph({
+                                children: [new docx.TextRun({ text: "Generated offline via Cat Converter by Nate Fish", size: 20 })]
+                            })
+                        ]
+                    }]
+                });
+
+                docx.Packer.toBlob(doc).then(blob => {
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `Cat_${currentTemplateType}_${Date.now()}.docx`;
+                    link.click();
+                    showToast("Word (.docx) exported!");
+                });
+            }
+        }
+    </script>
+</body>
+</html>
